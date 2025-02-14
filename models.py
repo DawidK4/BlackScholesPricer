@@ -1,6 +1,20 @@
 import numpy as np
 import scipy.stats as si
 
+'''
+Computes the price of a European call or put option using the Black-Scholes formula.
+
+Parameters:
+S (float): Current stock price
+K (float): Strike price of the option
+T (float): Time to maturity (in years)
+r (float): Risk-free interest rate (annualized)
+sigma (float): Volatility of the underlying asset (annualized)
+option_type (str, optional): Type of option ('call' or 'put')
+
+Returns:
+(float): Option price
+'''
 def black_scholes(S, K, T, r, sigma, option_type="call"):
     """Computes the Black-Scholes option price."""
     d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
@@ -12,7 +26,22 @@ def black_scholes(S, K, T, r, sigma, option_type="call"):
         return K * np.exp(-r * T) * si.norm.cdf(-d2) - S * si.norm.cdf(-d1)
     else:
         raise ValueError("Invalid option type. Choose 'call' or 'put'.")
+    
+'''
+Computes the price of an option using the Binomial Tree method.
 
+Parameters:
+S (float): Current stock price
+K (float): Strike price of the option
+T (float): Time to maturity (in years)
+r (float): Risk-free interest rate (annualized)
+sigma (float): Volatility of the underlying asset (annualized)
+N (int, optional): Number of time steps in the binomial tree (default: 100)
+option_type (str, optional): Type of option ('call' or 'put')
+
+Returns:
+(float): Option price
+'''
 def binomial_tree(S, K, T, r, sigma, N=100, option_type="call"):
     """Computes option price using Binomial Tree method."""
     dt = T / N
@@ -38,6 +67,21 @@ def binomial_tree(S, K, T, r, sigma, N=100, option_type="call"):
     
     return option_values[0, 0]
 
+'''
+Computes the price of an option using Monte Carlo simulation.
+
+Parameters:
+S (float): Current stock price
+K (float): Strike price of the option
+T (float): Time to maturity (in years)
+r (float): Risk-free interest rate (annualized)
+sigma (float): Volatility of the underlying asset (annualized)
+simulations (int, optional): Number of Monte Carlo simulations (default: 10,000)
+option_type (str, optional): Type of option ('call' or 'put')
+
+Returns:
+(float): Option price (Monte Carlo estimate)
+'''
 def monte_carlo(S, K, T, r, sigma, simulations=10000, option_type="call"):
     """Computes option price using Monte Carlo simulation."""
     np.random.seed(42)  # For reproducibility
