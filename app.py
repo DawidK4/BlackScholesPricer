@@ -5,13 +5,14 @@ import models.option_pricing as option_pricing
 import models.greeks as greeks
 import models.volatility as volatility
 
-def get_data(ticker, period="1mo"):
+def get_data(ticker, option_type="call", period="1mo"):
     """
     Fetches financial data for a given stock ticker using Yahoo Finance (via yfinance).
     Retrieves the latest closing price, expiration dates for options, strike prices, volatility, and time to maturity.
 
     Parameters:
     ticker: The stock ticker symbol (e.g., "AAPL", "GOOG").
+    option_type: The type of option to fetch ("call" or "put").
     period: The period of historical data (default: "1mo").
 
     Returns:
@@ -37,7 +38,12 @@ def get_data(ticker, period="1mo"):
     
     selected_expiry = expirations[0]  
     option_chain = stock.option_chain(selected_expiry)
-    strike_prices = option_chain.calls["strike"].values
+
+    if option_type == "call":
+        strike_prices = option_chain.calls["strike"].values
+    else:
+        strike_prices = option_chain.puts["strike"].values
+
     K = min(strike_prices, key=lambda x: abs(x - S))
 
     sigma = volatility.calculate_historical_volatility(ticker, period="1y")
@@ -58,24 +64,26 @@ if "data" not in st.session_state:
 
 if data_source == "Fetch from Yahoo Finance":
     ticker = st.text_input("Enter Stock Ticker:", "AAPL")
+    option_type = st.radio("Select Option Type", ["Call", "Put"])
+
     if st.button("Fetch Data"):
-        data = get_data(ticker)
+        data = get_data(ticker, option_type.lower())  # Pass option type
         if data:
             st.session_state.data = data  
-            st.success("Data retrieved successfully!")
+            st.success(f"Data retrieved successfully for {option_type} option!")
 
-            # Display data in a table
-            st.subheader("📊 Fetched Data")
+            st.subheader(f"📊 Fetched Data for {option_type} Option")
             st.table({
                 "Metric": ["Stock Price (S)", "Closest Strike Price (K)", "Time to Maturity (T)", "Volatility (σ)", "Risk-Free Rate (r)"],
                 "Value": [f"${data['S']:.2f}", f"${data['K']:.2f}", f"{data['T']:.4f} years", f"{data['sigma']:.4f}", f"{data['r']:.2f}"]
             })
 
-            # Store and display Greeks
-            if "greeks" not in st.session_state:
-                st.session_state.greeks = greeks.calculate_greeks(data['S'], data['K'], data['T'], data['r'], data['sigma'], option_type="call")
+            # Calculate Greeks for selected option type
+            st.session_state.greeks = greeks.calculate_greeks(
+                data['S'], data['K'], data['T'], data['r'], data['sigma'], option_type.lower()
+            )
 
-            st.subheader("📉 Greeks for Call Option")
+            st.subheader(f"📉 Greeks for {option_type} Option")
             st.table({
                 "Greek": ["Delta", "Gamma", "Theta", "Vega", "Rho"],
                 "Value": [f"{st.session_state.greeks['delta']:.4f}", f"{st.session_state.greeks['gamma']:.4f}", 
