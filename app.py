@@ -5,25 +5,24 @@ import models.option_pricing as option_pricing
 import models.greeks as greeks
 import models.volatility as volatility
 
-'''
-This function fetches financial data for a given stock ticker using Yahoo Finance (via yfinance). 
-It retrieves the latest closing price, expiration dates for options, strike prices, volatility, and time to maturity.
-
-Parameters:
-ticker: The stock ticker symbol (e.g., "AAPL", "GOOG") for which data is fetched.
-period: The period of historical data (default is "1mo", but can be adjusted to other values like "1y", "6mo", etc.).
-
-Returns:
-A dictionary containing:
-"S": The latest closing price of the stock.
-"K": The closest strike price to the current stock price.
-"T": The time to maturity of the nearest option in years.
-"sigma": The estimated volatility of the stock using historical data.
-"r": A fixed risk-free rate (defaulted to 0.05 or 5%).
-'''
 def get_data(ticker, period="1mo"):
-    stock = yf.Ticker(ticker)
+    """
+    Fetches financial data for a given stock ticker using Yahoo Finance (via yfinance).
+    Retrieves the latest closing price, expiration dates for options, strike prices, volatility, and time to maturity.
 
+    Parameters:
+    ticker: The stock ticker symbol (e.g., "AAPL", "GOOG").
+    period: The period of historical data (default: "1mo").
+
+    Returns:
+    A dictionary with:
+      - "S": Latest closing price
+      - "K": Closest strike price
+      - "T": Time to maturity (years)
+      - "sigma": Estimated volatility
+      - "r": Fixed risk-free rate (0.05)
+    """
+    stock = yf.Ticker(ticker)
     history = stock.history(period=period)
     if history.empty:
         st.error(f"No stock price data found for {ticker}.")
@@ -38,9 +37,7 @@ def get_data(ticker, period="1mo"):
     
     selected_expiry = expirations[0]  
     option_chain = stock.option_chain(selected_expiry)
-
     strike_prices = option_chain.calls["strike"].values
-    
     K = min(strike_prices, key=lambda x: abs(x - S))
 
     sigma = volatility.calculate_historical_volatility(ticker, period="1y")
@@ -48,8 +45,6 @@ def get_data(ticker, period="1mo"):
     expiry_date = datetime.datetime.strptime(selected_expiry, "%Y-%m-%d")
     today = datetime.datetime.today()
     T = max((expiry_date - today).days / 365, 0)  
-    
-    # Risk-free rate (assumed constant)
     r = 0.05  
 
     return {"S": S, "K": K, "T": T, "sigma": sigma, "r": r}
@@ -68,26 +63,30 @@ if data_source == "Fetch from Yahoo Finance":
         if data:
             st.session_state.data = data  
             st.success("Data retrieved successfully!")
-            st.write(f"**Stock Price (S):** ${data['S']:.2f}")
-            st.write(f"**Closest Strike Price (K):** ${data['K']:.2f}")
-            st.write(f"**Time to Maturity (T):** {data['T']:.4f} years")
-            st.write(f"**Volatility (σ):** {data['sigma']:.4f}")
-            st.write(f"**Risk-Free Rate (r):** {data['r']:.2f}")
 
-            # Store Greeks data
+            # Display data in a table
+            st.subheader("📊 Fetched Data")
+            st.table({
+                "Metric": ["Stock Price (S)", "Closest Strike Price (K)", "Time to Maturity (T)", "Volatility (σ)", "Risk-Free Rate (r)"],
+                "Value": [f"${data['S']:.2f}", f"${data['K']:.2f}", f"{data['T']:.4f} years", f"{data['sigma']:.4f}", f"{data['r']:.2f}"]
+            })
+
+            # Store and display Greeks
             if "greeks" not in st.session_state:
-                greeks = greeks.calculate_greeks(data['S'], data['K'], data['T'], data['r'], data['sigma'], option_type="call")
-                st.session_state.greeks = greeks
+                st.session_state.greeks = greeks.calculate_greeks(data['S'], data['K'], data['T'], data['r'], data['sigma'], option_type="call")
 
-            st.write("**Greeks for Call Option:**")
-            st.write(f"**Delta:** {st.session_state.greeks['delta']:.4f}")
-            st.write(f"**Gamma:** {st.session_state.greeks['gamma']:.4f}")
-            st.write(f"**Theta:** {st.session_state.greeks['theta']:.4f}")
-            st.write(f"**Vega:** {st.session_state.greeks['vega']:.4f}")
-            st.write(f"**Rho:** {st.session_state.greeks['rho']:.4f}")
+            st.subheader("📉 Greeks for Call Option")
+            st.table({
+                "Greek": ["Delta", "Gamma", "Theta", "Vega", "Rho"],
+                "Value": [f"{st.session_state.greeks['delta']:.4f}", f"{st.session_state.greeks['gamma']:.4f}", 
+                          f"{st.session_state.greeks['theta']:.4f}", f"{st.session_state.greeks['vega']:.4f}", 
+                          f"{st.session_state.greeks['rho']:.4f}"]
+            })
         else:
             st.error("Failed to retrieve data from Yahoo Finance.")
+
 else:
+    st.subheader("🔢 Enter Option Parameters Manually")
     S = st.number_input("Stock Price (S)", value=100.0, key="S_input") 
     K = st.number_input("Strike Price (K)", value=100.0, key="K_input")  
     T = st.number_input("Time to Maturity (T, in years)", value=1.0, format="%.4f", key="T_input")  
@@ -95,7 +94,6 @@ else:
     sigma = st.number_input("Volatility (σ)", value=0.2, format="%.4f", key="sigma_input")  
 
 model = st.selectbox("Choose Pricing Model", ["Black-Scholes", "Binomial Tree", "Monte Carlo"])
-
 option_type = st.radio("Option Type", ["Call", "Put"])
 
 if st.button("Calculate Price"):
@@ -109,6 +107,7 @@ if st.button("Calculate Price"):
         r = st.session_state.get("r_input", 0.05)
         sigma = st.session_state.get("sigma_input", 0.2)
 
+    # Calculate option price
     if model == "Black-Scholes":
         price = option_pricing.black_scholes(S, K, T, r, sigma, option_type.lower())
     elif model == "Binomial Tree":
@@ -116,4 +115,10 @@ if st.button("Calculate Price"):
     elif model == "Monte Carlo":
         price = option_pricing.monte_carlo(S, K, T, r, sigma, simulations=10000, option_type=option_type.lower())
 
-    st.success(f"💰 **{model} Option Price:** ${price:.2f}")
+    # Display price result in a table
+    st.subheader("💰 Option Price Result")
+    st.table({
+        "Model": [model],
+        "Option Type": [option_type],
+        "Price": [f"${price:.2f}"]
+    })
