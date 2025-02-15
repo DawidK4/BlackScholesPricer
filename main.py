@@ -47,6 +47,7 @@ st.title("📈 Option Pricing Calculator")
 
 data_source = st.radio("Select Data Source", ["Fetch from Yahoo Finance", "Enter Manually"])
 
+# Fetch data from Yahoo Finance or use manual input
 if data_source == "Fetch from Yahoo Finance":
     ticker = st.text_input("Enter Stock Ticker:", "AAPL")
     if st.button("Fetch Data"):
@@ -69,21 +70,12 @@ if data_source == "Fetch from Yahoo Finance":
             st.write(f"**Rho:** {greeks['rho']:.4f}")
 else:
     st.subheader("Enter Your Own Data")
-    S = st.number_input("Stock Price (S)", value=100.0)
-    K = st.number_input("Strike Price (K)", value=100.0)
-    T = st.number_input("Time to Maturity (T, in years)", value=1.0, format="%.4f")
-    r = st.number_input("Risk-Free Rate (r)", value=0.05, format="%.2f")
-    sigma = st.number_input("Volatility (σ)", value=0.2, format="%.4f")
-
-    # Fetch and display Greeks for manual input
-    if st.button("Calculate Greeks"):
-        greeks = models.calculate_greeks(S, K, T, r, sigma, option_type="call")
-        st.write("**Greeks for Call Option:**")
-        st.write(f"**Delta:** {greeks['delta']:.4f}")
-        st.write(f"**Gamma:** {greeks['gamma']:.4f}")
-        st.write(f"**Theta:** {greeks['theta']:.4f}")
-        st.write(f"**Vega:** {greeks['vega']:.4f}")
-        st.write(f"**Rho:** {greeks['rho']:.4f}")
+    # Only show manual input fields if entering data manually
+    S = st.number_input("Stock Price (S)", value=100.0, key="S_input")  # Unique key for Stock Price
+    K = st.number_input("Strike Price (K)", value=100.0, key="K_input")  # Unique key for Strike Price
+    T = st.number_input("Time to Maturity (T, in years)", value=1.0, format="%.4f", key="T_input")  # Unique key for Time to Maturity
+    r = st.number_input("Risk-Free Rate (r)", value=0.05, format="%.2f", key="r_input")  # Unique key for Risk-Free Rate
+    sigma = st.number_input("Volatility (σ)", value=0.2, format="%.4f", key="sigma_input")  # Unique key for Volatility
 
 model = st.selectbox("Choose Pricing Model", ["Black-Scholes", "Binomial Tree", "Monte Carlo"])
 
@@ -94,6 +86,13 @@ if st.button("Calculate Price"):
     # Use fetched data if available
     if data_source == "Fetch from Yahoo Finance" and 'data' in locals() and data:
         S, K, T, r, sigma = data["S"], data["K"], data["T"], data["r"], data["sigma"]
+    else:
+        # If manually entering data, use the values from the input fields
+        S = st.session_state.get("S_input", 100.0)
+        K = st.session_state.get("K_input", 100.0)
+        T = st.session_state.get("T_input", 1.0)
+        r = st.session_state.get("r_input", 0.05)
+        sigma = st.session_state.get("sigma_input", 0.2)
 
     if model == "Black-Scholes":
         price = models.black_scholes(S, K, T, r, sigma, option_type.lower())
