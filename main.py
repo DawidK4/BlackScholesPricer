@@ -2,7 +2,7 @@ import streamlit as st
 import numpy as np
 import yfinance as yf
 import datetime
-import models  # Importing the models file
+import models 
 
 def get_data(ticker, period="1mo"):
     stock = yf.Ticker(ticker)

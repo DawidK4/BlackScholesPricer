@@ -95,6 +95,16 @@ def monte_carlo(S, K, T, r, sigma, simulations=10000, option_type="call"):
     
     return np.exp(-r * T) * np.mean(payoff)
 
+'''
+Calculates the historical volatility of a stock by analyzing its historical closing prices.
+
+Parameters:
+ticker (str): Stock ticker symbol (e.g., "AAPL").
+period (str, optional): Time period for the historical data (default: "1y"). Other options include "1mo", "3mo", etc.
+
+Returns:
+float: The annualized volatility of the stock.
+'''
 def calculate_historical_volatility(ticker, period="1y"):
     import yfinance as yf
     stock = yf.Ticker(ticker)
@@ -103,6 +113,25 @@ def calculate_historical_volatility(ticker, period="1y"):
     sigma = log_returns.std() * np.sqrt(252)  # Annualized standard deviation
     return sigma
 
+'''
+Calculates the option Greeks (Delta, Gamma, Theta, Vega, Rho) using the Black-Scholes model.
+
+Parameters:
+S (float): Current stock price.
+K (float): Strike price of the option.
+T (float): Time to maturity (in years).
+r (float): Risk-free interest rate (annualized).
+sigma (float): Volatility of the underlying asset (annualized).
+option_type (str, optional): Type of option ('call' or 'put'). Default is "call".
+
+Returns:
+dict: A dictionary containing the calculated Greeks:
+    delta: Sensitivity to changes in the stock price.
+    gamma: Sensitivity to changes in delta.
+    theta: Sensitivity to changes in time to maturity.
+    vega: Sensitivity to changes in volatility.
+    rho: Sensitivity to changes in the risk-free interest rate.
+'''
 def calculate_greeks(S, K, T, r, sigma, option_type="call"):
     d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
     d2 = d1 - sigma * np.sqrt(T)
