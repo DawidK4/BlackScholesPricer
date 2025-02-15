@@ -95,13 +95,22 @@ def monte_carlo(S, K, T, r, sigma, simulations=10000, option_type="call"):
     
     return np.exp(-r * T) * np.mean(payoff)
 
-# Example usage
-S = 100   # Stock price
-K = 100   # Strike price
-T = 1     # Time to maturity (in years)
-r = 0.05  # Risk-free rate
-sigma = 0.2  # Volatility
+def calculate_historical_volatility(ticker, period="1y"):
+    import yfinance as yf
+    stock = yf.Ticker(ticker)
+    historical_data = stock.history(period=period)
+    log_returns = np.log(historical_data["Close"] / historical_data["Close"].shift(1)).dropna()
+    sigma = log_returns.std() * np.sqrt(252)  # Annualized standard deviation
+    return sigma
 
-print("Black-Scholes Call Price:", black_scholes(S, K, T, r, sigma, "call"))
-print("Binomial Call Price:", binomial_tree(S, K, T, r, sigma))
-print("Monte Carlo Call Price:", monte_carlo(S, K, T, r, sigma))
+def calculate_greeks(S, K, T, r, sigma, option_type="call"):
+    d1 = (np.log(S / K) + (r + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
+    d2 = d1 - sigma * np.sqrt(T)
+    
+    delta = si.norm.cdf(d1) if option_type == "call" else si.norm.cdf(d1) - 1
+    gamma = si.norm.pdf(d1) / (S * sigma * np.sqrt(T))
+    theta = - (S * si.norm.pdf(d1) * sigma) / (2 * np.sqrt(T)) - r * K * np.exp(-r * T) * si.norm.cdf(d2) if option_type == "call" else - (S * si.norm.pdf(d1) * sigma) / (2 * np.sqrt(T)) + r * K * np.exp(-r * T) * si.norm.cdf(-d2)
+    vega = S * np.sqrt(T) * si.norm.pdf(d1)
+    rho = K * T * np.exp(-r * T) * si.norm.cdf(d2) if option_type == "call" else - K * T * np.exp(-r * T) * si.norm.cdf(-d2)
+    
+    return {"delta": delta, "gamma": gamma, "theta": theta, "vega": vega, "rho": rho}

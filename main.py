@@ -1,8 +1,8 @@
-import streamlit as st 
+import streamlit as st
 import numpy as np
 import yfinance as yf
 import datetime
-import models  
+import models  # Importing the models file
 
 def get_data(ticker, period="1mo"):
     stock = yf.Ticker(ticker)
@@ -31,13 +31,7 @@ def get_data(ticker, period="1mo"):
     K = min(strike_prices, key=lambda x: abs(x - S))
 
     # Estimate volatility using historical log returns
-    historical_data = stock.history(period="1y")
-    if historical_data.empty:
-        st.error(f"Not enough historical data for volatility calculation.")
-        return None
-    
-    log_returns = np.log(historical_data["Close"] / historical_data["Close"].shift(1)).dropna()
-    sigma = log_returns.std() * np.sqrt(252)  # Annualized standard deviation
+    sigma = models.calculate_historical_volatility(ticker, period="1y")
     
     # Calculate time to maturity
     expiry_date = datetime.datetime.strptime(selected_expiry, "%Y-%m-%d")
@@ -64,6 +58,15 @@ if data_source == "Fetch from Yahoo Finance":
             st.write(f"**Time to Maturity (T):** {data['T']:.4f} years")
             st.write(f"**Volatility (σ):** {data['sigma']:.4f}")
             st.write(f"**Risk-Free Rate (r):** {data['r']:.2f}")
+            
+            # Fetch and display Greeks
+            greeks = models.calculate_greeks(data['S'], data['K'], data['T'], data['r'], data['sigma'], option_type="call")
+            st.write("**Greeks for Call Option:**")
+            st.write(f"**Delta:** {greeks['delta']:.4f}")
+            st.write(f"**Gamma:** {greeks['gamma']:.4f}")
+            st.write(f"**Theta:** {greeks['theta']:.4f}")
+            st.write(f"**Vega:** {greeks['vega']:.4f}")
+            st.write(f"**Rho:** {greeks['rho']:.4f}")
 else:
     st.subheader("Enter Your Own Data")
     S = st.number_input("Stock Price (S)", value=100.0)
@@ -71,6 +74,16 @@ else:
     T = st.number_input("Time to Maturity (T, in years)", value=1.0, format="%.4f")
     r = st.number_input("Risk-Free Rate (r)", value=0.05, format="%.2f")
     sigma = st.number_input("Volatility (σ)", value=0.2, format="%.4f")
+
+    # Fetch and display Greeks for manual input
+    if st.button("Calculate Greeks"):
+        greeks = models.calculate_greeks(S, K, T, r, sigma, option_type="call")
+        st.write("**Greeks for Call Option:**")
+        st.write(f"**Delta:** {greeks['delta']:.4f}")
+        st.write(f"**Gamma:** {greeks['gamma']:.4f}")
+        st.write(f"**Theta:** {greeks['theta']:.4f}")
+        st.write(f"**Vega:** {greeks['vega']:.4f}")
+        st.write(f"**Rho:** {greeks['rho']:.4f}")
 
 model = st.selectbox("Choose Pricing Model", ["Black-Scholes", "Binomial Tree", "Monte Carlo"])
 
