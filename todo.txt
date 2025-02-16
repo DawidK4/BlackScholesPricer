@@ -1,0 +1,14 @@
+display greeks after calculating the price (it will differ for binomial and monte carlo) 
+
+implement logging and account creation 
+
+add connection to the db that will store user's portfolio
+
+add advanced analytics 
+
+add the in the money, out of the money charts
+
+
+TO BE FIXED:
+after clicking fetch data and then calculating the price ('TSLA') the correct result is recorded 
+but when the call option is then set to the put it writes down manually entered

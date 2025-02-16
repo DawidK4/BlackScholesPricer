@@ -1,9 +1,8 @@
 import streamlit as st
 import yfinance as yf
 import datetime
-import models.option_pricing as option_pricing
-import models.greeks as greeks
-import models.volatility as volatility
+from models import greeks, option_pricing, volatility
+from utils import login
 
 def get_data(ticker, period="1mo"):
     stock = yf.Ticker(ticker)
@@ -34,7 +33,12 @@ def get_data(ticker, period="1mo"):
 
 st.set_page_config(layout="wide")
 
+login.login_ui()  # Displays the login pop-up
+
 st.title("📈 Option Pricing Calculator")
+
+if not st.session_state["logged_in"]:
+    st.warning("⚠️ You are not logged in. Some features may be limited.")
 
 if "option_history" not in st.session_state:
     st.session_state.option_history = []  
@@ -71,23 +75,19 @@ with col1:
         r_manual = st.number_input("Risk-Free Rate (r)", value=0.05, format="%.2f") 
         sigma_manual = st.number_input("Volatility (σ)", value=0.2, format="%.4f")  
 
-# Common section for option pricing
 st.subheader("📊 Calculate Option Price")
 model = st.selectbox("Choose Pricing Model", ["Black-Scholes", "Binomial Tree", "Monte Carlo"])
 option_type = st.radio("Option Type", ["Call", "Put"])
 
 if st.button("Calculate Price"):
     if "data" in st.session_state and st.session_state.data and "data_source" in st.session_state:
-        # Use fetched data
         data = st.session_state.data  
         S, K, T, r, sigma = data["S"], data["K"], data["T"], data["r"], data["sigma"]
         source = st.session_state.data_source
     else:
-        # Use manual input
         S, K, T, r, sigma = S_manual, K_manual, T_manual, r_manual, sigma_manual
         source = "Entered Manually"
 
-    # Calculate price
     if model == "Black-Scholes":
         price = option_pricing.black_scholes(S, K, T, r, sigma, option_type.lower())
     elif model == "Binomial Tree":
@@ -102,14 +102,12 @@ if st.button("Calculate Price"):
         "Source": source
     })
 
-    # Remove fetched/manual data from session state after storing
     if "data" in st.session_state:
         del st.session_state.data
     if "data_source" in st.session_state:   
         del st.session_state.data_source
 
 
-# Right side: Display stored calculation history
 with col2:
     st.subheader("📜 Calculation History")
     if st.session_state.option_history:
