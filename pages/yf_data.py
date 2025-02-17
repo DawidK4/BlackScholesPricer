@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from utils import fetch_data
-from models import option_pricing
+from models import option_pricing, volatility, greeks
+import numpy as np
 
 st.set_page_config(page_title="Stock Data & Option Pricing", layout="wide")
 
@@ -72,3 +73,17 @@ if data:
         )
     
     st.success(f"The estimated {option_type.lower()} option price is: **${price:.2f}**")
+
+    volatility_value = volatility.calculate_historical_volatility(ticker)
+    st.metric("Historical Volatility", f"{volatility_value:.2f}%")
+
+    greeks_values = greeks.calculate_greeks(
+        data["S"], data["K"], data["T"], data["r"], data["sigma"], option_type.lower()
+    )
+    
+    st.subheader("Option Greeks")
+    st.write(f"Delta: {greeks_values['delta']:.4f}")
+    st.write(f"Gamma: {greeks_values['gamma']:.4f}")
+    st.write(f"Theta: {greeks_values['theta']:.4f}")
+    st.write(f"Vega: {greeks_values['vega']:.4f}")
+    st.write(f"Rho: {greeks_values['rho']:.4f}")
