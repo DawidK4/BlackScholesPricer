@@ -1,35 +1,8 @@
 import streamlit as st
 import yfinance as yf
 import datetime
-from models import greeks, option_pricing, volatility
-from utils import login
-
-def get_data(ticker, period="1mo"):
-    stock = yf.Ticker(ticker)
-    history = stock.history(period=period)
-    if history.empty:
-        st.error(f"No stock price data found for {ticker}.")
-        return None
-
-    S = history["Close"].iloc[-1]  
-    expirations = stock.options
-    if not expirations:
-        st.error(f"No options data found for {ticker}.")
-        return None
-    
-    selected_expiry = expirations[0]  
-    option_chain = stock.option_chain(selected_expiry)
-    strike_prices = option_chain.calls["strike"].values
-    K = min(strike_prices, key=lambda x: abs(x - S))
-
-    sigma = volatility.calculate_historical_volatility(ticker, period="1y")
-    
-    expiry_date = datetime.datetime.strptime(selected_expiry, "%Y-%m-%d")
-    today = datetime.datetime.today()
-    T = max((expiry_date - today).days / 365, 0)  
-    r = 0.05  
-
-    return {"S": S, "K": K, "T": T, "sigma": sigma, "r": r}
+from models import option_pricing
+from utils import fetch_data, login
 
 st.set_page_config(layout="wide")
 
@@ -53,7 +26,7 @@ with col1:
         ticker = st.text_input("Enter Stock Ticker:", "AAPL")
         
         if st.button("Fetch Data"):
-            data = get_data(ticker)
+            data = fetch_data.get_data(ticker)
             if data:
                 st.session_state.data = data  
                 st.session_state.data_source = f"Yahoo Finance ({ticker})"
