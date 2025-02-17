@@ -1,12 +1,11 @@
 import streamlit as st
 import yfinance as yf
-import datetime
 from models import option_pricing
 from utils import fetch_data, login
 
 st.set_page_config(layout="wide")
 
-login.login_ui()  # Displays the login pop-up
+login.login_ui()  
 
 st.title("📈 Option Pricing Calculator")
 
@@ -22,9 +21,10 @@ with col1:
     tab_yfinance, tab_manual = st.tabs(["📡 Fetch from Yahoo Finance", "✍️ Enter Manually"])
 
     with tab_yfinance:
+        print("Opened tab_yfinance")
         st.subheader("Fetch Option Data from Yahoo Finance")
         ticker = st.text_input("Enter Stock Ticker:", "AAPL")
-        
+
         if st.button("Fetch Data"):
             data = fetch_data.get_data(ticker)
             if data:
@@ -40,46 +40,40 @@ with col1:
                 "Value": [f"${data['S']:.2f}", f"${data['K']:.2f}", f"{data['T']:.4f} years", f"{data['sigma']:.4f}", f"{data['r']:.2f}"]
             })
 
+        st.subheader("📊 Calculate Option Price")
+        model = st.selectbox("Choose Pricing Model", ["Black-Scholes", "Binomial Tree", "Monte Carlo"])
+        option_type = st.radio("Option Type", ["Call", "Put"])
+
+        if st.button("Calculate Price"):
+            if "data" in st.session_state and st.session_state.data and "data_source" in st.session_state:
+                data = st.session_state.data  
+                S, K, T, r, sigma = data["S"], data["K"], data["T"], data["r"], data["sigma"]
+                source = st.session_state.data_source
+                print("Got the session state data: " + str(source))
+
+            if model == "Black-Scholes":
+                price = option_pricing.black_scholes(S, K, T, r, sigma, option_type.lower())
+            elif model == "Binomial Tree":
+                price = option_pricing.binomial_tree(S, K, T, r, sigma, N=100, option_type=option_type.lower())
+            elif model == "Monte Carlo":
+                price = option_pricing.monte_carlo(S, K, T, r, sigma, simulations=10000, option_type=option_type.lower())
+
+            st.session_state.option_history.append({
+                "Model": model,
+                "Option Type": option_type,
+                "Price": f"${price:.2f}",
+                "Source": source
+            })
+
     with tab_manual:
+        print("Opened tab manual")
         st.subheader("Manually Enter Option Parameters")
         S_manual = st.number_input("Stock Price (S)", value=100.0) 
         K_manual = st.number_input("Strike Price (K)", value=100.0)  
         T_manual = st.number_input("Time to Maturity (T, in years)", value=1.0, format="%.4f")  
         r_manual = st.number_input("Risk-Free Rate (r)", value=0.05, format="%.2f") 
         sigma_manual = st.number_input("Volatility (σ)", value=0.2, format="%.4f")  
-
-st.subheader("📊 Calculate Option Price")
-model = st.selectbox("Choose Pricing Model", ["Black-Scholes", "Binomial Tree", "Monte Carlo"])
-option_type = st.radio("Option Type", ["Call", "Put"])
-
-if st.button("Calculate Price"):
-    if "data" in st.session_state and st.session_state.data and "data_source" in st.session_state:
-        data = st.session_state.data  
-        S, K, T, r, sigma = data["S"], data["K"], data["T"], data["r"], data["sigma"]
-        source = st.session_state.data_source
-    else:
-        S, K, T, r, sigma = S_manual, K_manual, T_manual, r_manual, sigma_manual
-        source = "Entered Manually"
-
-    if model == "Black-Scholes":
-        price = option_pricing.black_scholes(S, K, T, r, sigma, option_type.lower())
-    elif model == "Binomial Tree":
-        price = option_pricing.binomial_tree(S, K, T, r, sigma, N=100, option_type=option_type.lower())
-    elif model == "Monte Carlo":
-        price = option_pricing.monte_carlo(S, K, T, r, sigma, simulations=10000, option_type=option_type.lower())
-
-    st.session_state.option_history.append({
-        "Model": model,
-        "Option Type": option_type,
-        "Price": f"${price:.2f}",
-        "Source": source
-    })
-
-    if "data" in st.session_state:
-        del st.session_state.data
-    if "data_source" in st.session_state:   
-        del st.session_state.data_source
-
+        option_name = st.text_input("Option name", value="")
 
 with col2:
     st.subheader("📜 Calculation History")
