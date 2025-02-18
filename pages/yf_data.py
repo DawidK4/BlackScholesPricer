@@ -13,7 +13,6 @@ This app allows users to fetch stock market data and perform option pricing calc
 Simply enter a valid stock ticker symbol and click the **Fetch Data** button.
 """)
 
-# Initialize session state
 if 'option_type' not in st.session_state:
     st.session_state.option_type = 'Call'
 if 'pricing_model' not in st.session_state:
@@ -21,15 +20,15 @@ if 'pricing_model' not in st.session_state:
 if 'data' not in st.session_state:
     st.session_state.data = None
 
-ticker = st.text_input("Enter Ticker Symbol:", "AAPL", help="Enter the stock ticker symbol (e.g., AAPL for Apple Inc.).")
+with st.sidebar:
+    ticker = st.text_input("Enter Ticker Symbol:", "AAPL", help="Enter the stock ticker symbol (e.g., AAPL for Apple Inc.).")
+    pricing_model = st.selectbox("Select Pricing Model:", ["Black-Scholes", "Binomial Tree", "Monte Carlo"])
+    st.session_state.pricing_model = pricing_model
+    option_type = st.selectbox("Select Option Type:", ["Call", "Put"], index=0 if st.session_state.option_type == "Call" else 1)
+    st.session_state.option_type = option_type
+    fetch_button = st.button("Fetch Data")
 
-pricing_model = st.selectbox("Select Pricing Model:", ["Black-Scholes", "Binomial Tree", "Monte Carlo"])
-st.session_state.pricing_model = pricing_model
-
-option_type = st.selectbox("Select Option Type:", ["Call", "Put"], index=0 if st.session_state.option_type == "Call" else 1)
-st.session_state.option_type = option_type
-
-if st.button("Fetch Data"):
+if fetch_button:
     st.session_state.data = fetch_data.get_data(ticker)
     
     if st.session_state.data:
@@ -67,7 +66,6 @@ if st.button("Fetch Data"):
         
         st.success(f"The estimated {option_type.lower()} option price is: **${price:.2f}**")
         
-        # Greeks calculation
         greeks_dict = greeks.calculate_greeks(
             st.session_state.data["S"], st.session_state.data["K"], st.session_state.data["T"], 
             st.session_state.data["r"], st.session_state.data["sigma"], option_type.lower()
@@ -96,8 +94,6 @@ if st.button("Fetch Data"):
         else:
             st.error("Failed to calculate historical volatility.")
 
-        st.subheader("Profit from Exercising the Option")
-
         stock_price = st.session_state.data["S"]
         strike_price = st.session_state.data["K"]
 
@@ -109,6 +105,10 @@ if st.button("Fetch Data"):
                 profits.append(max(0, price - strike_price))  
             else: 
                 profits.append(max(0, strike_price - price))  
+
+        at_the_money_price = strike_price
+
+        st.metric("At the Money Price", f"${at_the_money_price:.2f}")
 
         plt.figure(figsize=(10, 6))
         plt.plot(stock_prices_range, profits, label=f"{option_type} Option Profit", color='b')

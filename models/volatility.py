@@ -1,4 +1,5 @@
 import numpy as np
+import yfinance as yf
 import scipy.stats as si
 
 '''
@@ -12,7 +13,6 @@ Returns:
 float: The annualized volatility of the stock.
 '''
 def calculate_historical_volatility(ticker, period="1y"):
-    import yfinance as yf
     stock = yf.Ticker(ticker)
     historical_data = stock.history(period=period)
     log_returns = np.log(historical_data["Close"] / historical_data["Close"].shift(1)).dropna()
