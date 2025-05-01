@@ -13,3 +13,5 @@ after clicking fetch data and then calculating the price ('TSLA') the correct re
 but when the call option is then set to the put it writes down manually entered
 
 unittests
+
+add millions/billions in stock display page 
