@@ -29,7 +29,7 @@ with st.sidebar:
     fetch_button = st.button("Fetch Data")
 
 if fetch_button:
-    st.session_state.data = fetch_data.get_data(ticker)
+    st.session_state.data = fetch_data.get_options_data(ticker)
     
     if st.session_state.data:
         st.success(f"Successfully fetched data for **{ticker}**.")
