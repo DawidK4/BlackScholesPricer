@@ -55,44 +55,98 @@ def get_stock_price_targets(ticker):
     except Exception as e:
         return {"error": str(e)}
     
-def get_last_year_income_statement(ticker):
+def get_income_statement(ticker, period="1y"):
     stock = yf.Ticker(ticker)
-    income_stmt = stock.financials  
-    
+    income_stmt = stock.financials
+
     if income_stmt is not None and not income_stmt.empty:
-        latest_year = income_stmt.columns[0]
-        df = income_stmt[[latest_year]].copy()
-        df.columns = [latest_year.strftime('%Y')]  
+        num_years = int(period.strip("y"))
+        columns = income_stmt.columns[:num_years]
+        df = income_stmt[columns].copy()
+        df.columns = [col.strftime('%Y') for col in df.columns]
         df.reset_index(inplace=True)
-        df.columns = ['Item', 'Value']
+        df = df.melt(id_vars="index", var_name="Year", value_name="Value")
+        df.rename(columns={"index": "Item"}, inplace=True)
+        df["Value"] = pd.to_numeric(df["Value"], errors="coerce")
+        df["Item"] = df["Item"].astype(str)
         return df
     else:
-        return pd.DataFrame(columns=['Item', 'Value'])
+        return pd.DataFrame(columns=['Item', 'Year', 'Value'])
     
-def get_last_year_balance_sheet(ticker):
+def get_balance_sheet(ticker, period="1y"):
     stock = yf.Ticker(ticker)
-    balance_sheet = stock.balance_sheet 
+    balance_sheet = stock.balance_sheet
 
     if balance_sheet is not None and not balance_sheet.empty:
-        latest_year = balance_sheet.columns[0]
-        df = balance_sheet[[latest_year]].copy()
-        df.columns = [latest_year.strftime('%Y')]
+        num_years = int(period.strip("y"))
+        columns = balance_sheet.columns[:num_years]
+        df = balance_sheet[columns].copy()
+        df.columns = [col.strftime('%Y') for col in df.columns]
         df.reset_index(inplace=True)
-        df.columns = ['Item', 'Value']
+        df = df.melt(id_vars="index", var_name="Year", value_name="Value")
+        df.rename(columns={"index": "Item"}, inplace=True)
+        df["Value"] = pd.to_numeric(df["Value"], errors="coerce")
+        df["Item"] = df["Item"].astype(str)
         return df
     else:
-        return pd.DataFrame(columns=['Item', 'Value'])
-    
-def get_last_year_cash_flow(ticker):
+        return pd.DataFrame(columns=['Item', 'Year', 'Value'])
+
+def get_cash_flow(ticker, period="1y"):
     stock = yf.Ticker(ticker)
-    cash_flow = stock.cashflow  
+    cash_flow = stock.cashflow
 
     if cash_flow is not None and not cash_flow.empty:
-        latest_year = cash_flow.columns[0]
-        df = cash_flow[[latest_year]].copy()
-        df.columns = [latest_year.strftime('%Y')]
+        num_years = int(period.strip("y"))
+        columns = cash_flow.columns[:num_years]
+        df = cash_flow[columns].copy()
+        df.columns = [col.strftime('%Y') for col in df.columns]
         df.reset_index(inplace=True)
-        df.columns = ['Item', 'Value']
+        df = df.melt(id_vars="index", var_name="Year", value_name="Value")
+        df.rename(columns={"index": "Item"}, inplace=True)
+        df["Value"] = pd.to_numeric(df["Value"], errors="coerce")
+        df["Item"] = df["Item"].astype(str)
         return df
     else:
-        return pd.DataFrame(columns=['Item', 'Value'])
+        return pd.DataFrame(columns=['Item', 'Year', 'Value'])
+
+def get_dividents(ticker, period="5y"):
+    stock = yf.Ticker(ticker)
+    dividends = stock.dividends
+    if dividends.empty:
+        return pd.DataFrame(columns=["Date", "Dividend"])
+    
+    unit = period[-1]
+    amount = int(period[:-1])
+    if unit == "y":
+        offset = pd.DateOffset(years=amount)
+    elif unit == "m":
+        offset = pd.DateOffset(months=amount)
+    else:
+        raise ValueError("Unsupported period unit. Use 'y' or 'm'.")
+
+    now = pd.Timestamp.now(tz=dividends.index.tz)
+
+    dividends = dividends[dividends.index >= now - offset]
+    return dividends.reset_index().rename(columns={"Dividends": "Dividend"})
+    
+    dividends = dividends[dividends.index >= pd.Timestamp.today() - offset]
+    return dividends.reset_index().rename(columns={"Dividends": "Dividend"})
+
+def get_splits(ticker, period="5y"):
+    stock = yf.Ticker(ticker)
+    splits = stock.splits
+    if splits.empty:
+        return pd.DataFrame(columns=["Date", "Split Ratio"])
+    
+    unit = period[-1]
+    amount = int(period[:-1])
+    if unit == "y":
+        offset = pd.DateOffset(years=amount)
+    elif unit == "m":
+        offset = pd.DateOffset(months=amount)
+    else:
+        raise ValueError("Unsupported period unit. Use 'y' or 'm'.")
+
+    now = pd.Timestamp.now(tz=splits.index.tz)
+    splits = splits[splits.index >= now - offset]
+    return splits.reset_index().rename(columns={"Stock Splits": "Split Ratio"})
